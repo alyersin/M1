@@ -1,6 +1,8 @@
 import matplotlib.pyplot as plt
 
-from functii import ALG_NN, ALG_KNN
+from algoritmi.nn import ALG_NN
+from algoritmi.knn import ALG_KNN
+from algoritmi.eigenfaces import ALG_EIGENFACES_CLASIC, ALG_EIGENFACES_REPREZENTANTI
 
 
 def AFISEAZA_COMPARATIE_IMAGINI(
@@ -15,11 +17,14 @@ def AFISEAZA_COMPARATIE_IMAGINI(
     persoana=29,
     numar_poza_test=1,
     dimensiune_imagine=(112, 92),
+    preprocesare_data=None,
+    nr_persoane=None,
 ):
 
     if A_test.shape[1] == 0 or A.shape[1] == 0:
         return
 
+    # norm_mapare este de fapt norma_dict din main.py
     norma_selectata = norm_mapare.get(norm_cheie)
     if norma_selectata is None:
         return
@@ -42,7 +47,7 @@ def AFISEAZA_COMPARATIE_IMAGINI(
             norma=norma_selectata,
             etichete_antrenare=etichete_antrenare,
         )
-    else:
+    elif tip_algoritm == '2':
         pozitie_identificata, eticheta_identificata = ALG_KNN(
             A,
             poza_test_curenta,
@@ -50,15 +55,42 @@ def AFISEAZA_COMPARATIE_IMAGINI(
             norma=norma_selectata,
             etichete_antrenare=etichete_antrenare,
         )
+    elif tip_algoritm == '3':
+        if preprocesare_data is None:
+            return
+        media, HQPB, proiectii = preprocesare_data
+        pozitie_identificata, eticheta_identificata = ALG_EIGENFACES_CLASIC(
+            poza_test_curenta,
+            media,
+            HQPB,
+            proiectii,
+            norma=norma_selectata,
+            etichete_antrenare=etichete_antrenare,
+        )
+    elif tip_algoritm == '4':
+        if preprocesare_data is None or nr_persoane is None:
+            return
+        media, HQPB, proiectii_rc = preprocesare_data
+        pozitie_identificata, eticheta_identificata = ALG_EIGENFACES_REPREZENTANTI(
+            poza_test_curenta,
+            media,
+            HQPB,
+            proiectii_rc,
+            norma=norma_selectata,
+            etichete_antrenare=etichete_antrenare,
+            nr_persoane=nr_persoane,
+        )
+    else:
+        return
 
     plt.figure(figsize=(8, 4))
     plt.subplot(1, 2, 1)
-    plt.title(f"Test s{etichete_test[index_test_selectat] + 1}")
+    plt.title(f"Poza de cautare s{etichete_test[index_test_selectat] + 1}")
     plt.imshow(poza_test_curenta.reshape(dimensiune_imagine), cmap='gray')
     plt.axis('off')
 
     plt.subplot(1, 2, 2)
-    plt.title(f"Identificat s{(eticheta_identificata or 0) + 1}")
+    plt.title(f"Imagine identificata s{(eticheta_identificata or 0) + 1}")
     poza_referinta = A[:, pozitie_identificata]
     plt.imshow(poza_referinta.reshape(dimensiune_imagine), cmap='gray')
     plt.axis('off')
@@ -77,6 +109,9 @@ def GENEREAZA_GRAFICE_NORME(
     dictionar_norme,
     dictionar_algoritmi,
     k=None,
+    k_eigenfaces=None,
+    preprocesare_data=None,
+    nr_persoane=None,
 ):
 
     if A_test.shape[1] == 0 or A.shape[1] == 0:
@@ -87,15 +122,29 @@ def GENEREAZA_GRAFICE_NORME(
     valori_timp_executie = []
 
     for norm_cheie, nume_norma in dictionar_norme.items():
-        acuratete, timp_mediu = functie_test(
-            A,
-            A_test,
-            etichete_antrenare,
-            etichete_test,
-            tip_algoritm,
-            norm_cheie,
-            k,
-        )
+        if tip_algoritm in ['3', '4']:
+            acuratete, timp_mediu = functie_test(
+                A,
+                A_test,
+                etichete_antrenare,
+                etichete_test,
+                tip_algoritm,
+                norm_cheie,
+                k=k,
+                k_eigenfaces=k_eigenfaces,
+                preprocesare_data=preprocesare_data,
+                nr_persoane=nr_persoane,
+            )
+        else:
+            acuratete, timp_mediu = functie_test(
+                A,
+                A_test,
+                etichete_antrenare,
+                etichete_test,
+                tip_algoritm,
+                norm_cheie,
+                k,
+            )
         etichete_norme_plot.append(nume_norma)
         valori_rata_recunoastere.append(acuratete)
         valori_timp_executie.append(timp_mediu)

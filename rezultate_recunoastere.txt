@@ -78,3 +78,56 @@ Rata de recunoastere: 97.50%
 Timp mediu interogare: 0.00598 sec / imagine
  
  
+2025-11-27 17:13:48
+Algoritm: KNN
+Norma: Euclidian
+Input k: 3
+Rata de recunoastere: 93.75%
+Timp mediu interogare: 0.05243 sec / imagine
+ 
+ 
+2025-11-27 18:26:36
+Algoritm: Eigenfaces Clasic
+Norma: Manhattan
+k Eigenfaces: 40
+Timp preprocesare: 0.33874 sec
+Rata de recunoastere: 95.00%
+Timp mediu interogare: 0.00069 sec / imagine
+ 
+ 
+2025-11-27 18:30:23
+Algoritm: Eigenfaces Clasic
+Norma: Manhattan
+k Eigenfaces: 60
+Timp preprocesare: 0.33093 sec
+Rata de recunoastere: 93.75%
+Timp mediu interogare: 0.00078 sec / imagine
+ 
+ 
+2025-11-27 18:32:32
+Algoritm: Eigenfaces Reprezentanti
+Norma: Manhattan
+k Eigenfaces: 100
+Timp preprocesare: 0.34865 sec
+Rata de recunoastere: 93.75%
+Timp mediu interogare: 0.00026 sec / imagine
+ 
+ 
+2025-11-27 18:33:08
+Algoritm: Eigenfaces Reprezentanti
+Norma: Manhattan
+k Eigenfaces: 80
+Timp preprocesare: 0.37183 sec
+Rata de recunoastere: 92.50%
+Timp mediu interogare: 0.00026 sec / imagine
+ 
+ 
+2025-11-27 18:35:01
+Algoritm: Eigenfaces Reprezentanti
+Norma: Euclidian
+k Eigenfaces: 80
+Timp preprocesare: 0.35972 sec
+Rata de recunoastere: 90.00%
+Timp mediu interogare: 0.00024 sec / imagine
+ 
+ 
