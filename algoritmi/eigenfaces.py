@@ -1,14 +1,81 @@
-# Algoritmul Eigenfaces - recunoaștere facială bazată pe PCA/SVD
+# Algoritmul Eigenfaces - recunoaștere facială bazată pe PCA/SVD/Lanczos
 import numpy as np
 import time
 import random
-from numpy.linalg import svd
+from numpy.linalg import svd, norm
 from utils.distante import CALC_DISTANTA_NORMA
 
 
+# Preprocesare pentru algoritmul Eigenfaces clasic folosind algoritmul Lanczos
+# Args: A - Matricea de antrenare (nrPixeli x nrPoze), k - Nivel de trunchiere (20, 40, 60, 80, 100)
+# Returns: media, HQPB, proiectii, timp_preprocesare
+def PREPROCESARE_EIGENFACES_LANCZOS(A, k):
+    t0 = time.perf_counter()
+    
+    # Pas 1: Calculam poza medie
+    media = np.mean(A, axis=1, keepdims=True)  # (nrPixeli x 1)
+    
+    # Pas 2: Centram toate pozele de antrenare
+    A_centrat = A - media  # (nrPixeli x nrPoze)
+    
+    m, n = A_centrat.shape  # m = nrPixeli, n = nrPoze
+    
+    # Initializare pentru algoritmul Lanczos
+    q = np.zeros((m, k + 2))  # Matricea de vectori ortogonali
+    
+    beta = 0
+    q[:, 0] = np.zeros(m)  # q_0 = 0
+    q[:, 1] = np.ones(m)  # q_1 = vector de 1
+    q[:, 1] = q[:, 1] / norm(q[:, 1])  # Normalizare
+    
+    # Algoritmul Lanczos
+    for i in range(1, k + 1):
+        # omega_i = A * (A^T * q_i) - beta_i * q_{i-1}
+        v = A_centrat.T @ q[:, i]  # A^T * q_i
+        term1 = A_centrat @ v  # A * (A^T * q_i)
+        
+        omega = term1 - beta * q[:, i-1]
+        
+        # alpha_i = <omega_i, q_i>
+        alpha = omega.T @ q[:, i]
+        
+        # omega_i = omega_i - alpha_i * q_i (Gram-Schmidt)
+        omega = omega - alpha * q[:, i]
+        
+        # beta_{i+1} = ||omega_i||_2
+        beta = norm(omega)
+        
+        # q_{i+1} = omega_i / beta_{i+1}
+        if beta != 0:
+            q[:, i+1] = omega / beta
+        else:
+            break
+    
+    # Eigenfaces = q[:, 2:] (sărim peste q_0 și q_1)
+    HQPB = q[:, 2:]
+    
+    # Trunchiere la k (dacă e necesar)
+    if HQPB.shape[1] > k:
+        HQPB = HQPB[:, :k]
+    
+    # Pas 3: Proiectam pozele pe HQPB
+    # Proiecția: HQPB.T @ A_centrat = (k x m) @ (m x n) = (k x n)
+    # Dar pentru consistență cu restul codului, returnăm (n x k)
+    proiectii = (HQPB.T @ A_centrat).T  # (n x k)
+    
+    # Convertim media la vector (nu keepdims)
+    media = media.flatten()
+    
+    t1 = time.perf_counter()
+    timp_preprocesare = t1 - t0
+    
+    return media, HQPB, proiectii, timp_preprocesare
+
+
 # Preprocesare pentru algoritmul Eigenfaces clasic
-# Varianta SVD (truncated SVD)
-# Args: A - Matricea de antrenare (nrPixeli x nrPoze), k - Nivel de trunchiere (20, 40, 60, 80, 100), metoda - 'SVD' sau 'PCA'
+# Varianta SVD (truncated SVD) sau PCA (optimizata/neoptimizata) sau Lanczos
+# Args: A - Matricea de antrenare (nrPixeli x nrPoze), k - Nivel de trunchiere (20, 40, 60, 80, 100)
+#       metoda - 'SVD', 'PCA' (neoptimizata cu C), 'PCA_optimizata' (optimizata cu L), 'Lanczos'
 # Returns: media, HQPB, proiectii, timp_preprocesare
 def PREPROCESARE_EIGENFACES_CLASIC(A, k, metoda='SVD'):
     t0 = time.perf_counter()
@@ -20,7 +87,10 @@ def PREPROCESARE_EIGENFACES_CLASIC(A, k, metoda='SVD'):
     B = A.copy()  # backup
     A_centrat = A - media.reshape(-1, 1)  # broadcasting
     
-    if metoda == 'SVD':
+    if metoda == 'Lanczos':
+        # Varianta Lanczos: folosim algoritmul Lanczos
+        return PREPROCESARE_EIGENFACES_LANCZOS(A, k)
+    elif metoda == 'SVD':
         # Varianta SVD: aplicam SVD pe A_centrat.T
         # A_centrat.T are dimensiunea (nrPoze x nrPixeli)
         U, s, Vt = svd(A_centrat.T, full_matrices=False)
@@ -36,12 +106,13 @@ def PREPROCESARE_EIGENFACES_CLASIC(A, k, metoda='SVD'):
         # Proiectiile: U (trunchiat) x S (diagonala din s)
         S = np.diag(s)
         proiectii = U @ S
-    else:
+    elif metoda == 'PCA':
         # Varianta PCA neoptimizata
         # Pas 3: Calculam matricea de covarianta C = A * A^T
+        # C are dimensiunea (nrPixeli x nrPixeli) = (10304 x 10304) - FOARTE MARE!
         C = A_centrat @ A_centrat.T
         
-        # Pas 4: Calculam vectorii proprii
+        # Pas 4: Calculam vectorii proprii ai matricei C
         d, v = np.linalg.eig(C)
         
         # Convertim la real (in cazul in care sunt complexe din cauza erorilor numerice)
@@ -54,6 +125,35 @@ def PREPROCESARE_EIGENFACES_CLASIC(A, k, metoda='SVD'):
         
         # HQPB = cei k vectori proprii
         HQPB = v[:, indici_k]
+        
+        # Pas 5: Proiectam pozele pe HQPB
+        proiectii = A_centrat.T @ HQPB
+    elif metoda == 'PCA_optimizata':
+        # Varianta PCA optimizata
+        # Pas 3: Calculam matricea L = A^T * A (in loc de C = A * A^T)
+        # L are dimensiunea (nrPoze x nrPoze) = (320 x 320) - MULT MAI MICA decat C!
+        L = A_centrat.T @ A_centrat
+        
+        # Pas 4: Calculam vectorii proprii ai matricei L
+        d, v = np.linalg.eig(L)
+        
+        # Convertim la real
+        d = np.real(d)
+        v = np.real(v)
+        
+        # Sortam dupa marimea valorilor proprii (descrescator)
+        indici_sortati = np.argsort(d)[::-1]
+        indici_k = indici_sortati[:k]
+        
+        # Vectorii proprii ai L sunt pe coloane in v
+        # Trebuie sa ii inmultim la stanga cu A pentru a obtine vectorii proprii ai C
+        # HQPB = A * v (vectorii proprii ai L, trunchiati la k)
+        v_k = v[:, indici_k]  # vectorii proprii ai L (320 x k)
+        HQPB = A_centrat @ v_k  # vectorii proprii ai C (10304 x k)
+        
+        # Normalizam vectorii proprii
+        for i in range(k):
+            HQPB[:, i] = HQPB[:, i] / (np.linalg.norm(HQPB[:, i]) + 1e-10)
         
         # Pas 5: Proiectam pozele pe HQPB
         proiectii = A_centrat.T @ HQPB
@@ -95,9 +195,10 @@ def MATRICE_REPREZENTANTI(A, etichete_antrenare, nr_persoane, metoda='media'):
 # Preprocesare pentru algoritmul Eigenfaces cu reprezentanti de clasa
 # Args: A - Matricea de antrenare, etichete_antrenare - Etichetele, nr_persoane - Numarul de persoane, k - Nivel de trunchiere
 #       metoda_hqpb - 'clasic' (HQPB din A) sau 'direct' (HQPB din RC), metoda_reprezentant - 'media' sau 'aleatorie'
+#       metoda - 'SVD', 'PCA', 'PCA_optimizata', 'Lanczos' - metoda pentru calculul HQPB
 # Returns: media, HQPB, proiectii_rc, timp_preprocesare
 def PREPROCESARE_EIGENFACES_REPREZENTANTI(A, etichete_antrenare, nr_persoane, k, 
-                                         metoda_hqpb='clasic', metoda_reprezentant='media'):
+                                         metoda_hqpb='clasic', metoda_reprezentant='media', metoda='SVD'):
     t0 = time.perf_counter()
     
     # Creem matricea reprezentantilor
@@ -105,7 +206,7 @@ def PREPROCESARE_EIGENFACES_REPREZENTANTI(A, etichete_antrenare, nr_persoane, k,
     
     if metoda_hqpb == 'clasic':
         # Varianta a): HQPB exact ca la Eigenfaces clasic, dar proiectam doar RC
-        media, HQPB, _, _ = PREPROCESARE_EIGENFACES_CLASIC(A, k, metoda='SVD')
+        media, HQPB, _, _ = PREPROCESARE_EIGENFACES_CLASIC(A, k, metoda=metoda)
         
         # Centram reprezentantii
         RC_centrat = RC - media.reshape(-1, 1)
@@ -114,7 +215,7 @@ def PREPROCESARE_EIGENFACES_REPREZENTANTI(A, etichete_antrenare, nr_persoane, k,
         proiectii_rc = RC_centrat.T @ HQPB
     else:
         # Varianta b): Folosim RC in loc de A in preprocesare
-        media, HQPB, _, _ = PREPROCESARE_EIGENFACES_CLASIC(RC, k, metoda='SVD')
+        media, HQPB, _, _ = PREPROCESARE_EIGENFACES_CLASIC(RC, k, metoda=metoda)
         
         # Centram reprezentantii
         RC_centrat = RC - media.reshape(-1, 1)

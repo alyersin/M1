@@ -95,6 +95,7 @@ def main():
     norm = selectie.get('norma', '')
     k = selectie.get('k', None)
     k_eigenfaces = selectie.get('k_eigenfaces', None)
+    metoda_eigenfaces = selectie.get('metoda_eigenfaces', 'SVD')  # Default SVD
     
     # Validare
     if not tip_algoritm or not norm:
@@ -115,6 +116,8 @@ def main():
         print(f"k (KNN): {k}")
     if k_eigenfaces:
         print(f"k (Eigenfaces): {k_eigenfaces}")
+    if tip_algoritm in ['3', '4']:
+        print(f"Metoda Eigenfaces: {metoda_eigenfaces}")
     print("\nIncarc datele...")
     
     baza_date = LOAD_IMGS('att_faces', nr_persoane=40, poze_per_persoana=10)
@@ -126,15 +129,15 @@ def main():
     
     # Preprocesare pentru Eigenfaces
     if tip_algoritm == '3':
-        print("Preprocesare Eigenfaces Clasic...")
-        media, HQPB, proiectii, timp_preprocesare = PREPROCESARE_EIGENFACES_CLASIC(A, k_eigenfaces, metoda='SVD')
+        print(f"Preprocesare Eigenfaces Clasic (metoda: {metoda_eigenfaces})...")
+        media, HQPB, proiectii, timp_preprocesare = PREPROCESARE_EIGENFACES_CLASIC(A, k_eigenfaces, metoda=metoda_eigenfaces)
         preprocesare_data = (media, HQPB, proiectii)
         print(f"Timp preprocesare: {timp_preprocesare:.5f} sec")
     elif tip_algoritm == '4':
-        print("Preprocesare Eigenfaces Reprezentanti...")
+        print(f"Preprocesare Eigenfaces Reprezentanti (metoda: {metoda_eigenfaces})...")
         media, HQPB, proiectii_rc, timp_preprocesare = PREPROCESARE_EIGENFACES_REPREZENTANTI(
             A, etichete_antrenare, nr_persoane, k_eigenfaces,
-            metoda_hqpb='clasic', metoda_reprezentant='media'
+            metoda_hqpb='clasic', metoda_reprezentant='media', metoda=metoda_eigenfaces
         )
         preprocesare_data = (media, HQPB, proiectii_rc)
         print(f"Timp preprocesare: {timp_preprocesare:.5f} sec")

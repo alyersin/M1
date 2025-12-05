@@ -40,6 +40,14 @@ def INTERFATA_SELECTARE(algoritm_dict, norma_dict):
     k_eigenfaces_combo['values'] = ['20', '40', '60', '80', '100']
     k_eigenfaces_combo.pack(pady=5)
     
+    # Metoda pentru Eigenfaces (SVD/PCA/Lanczos)
+    tk.Label(root, text="Metoda Eigenfaces:", font=("Arial", 10)).pack(pady=5)
+    metoda_eigenfaces_var = tk.StringVar()
+    metoda_eigenfaces_combo = ttk.Combobox(root, textvariable=metoda_eigenfaces_var, state="readonly", width=30)
+    metoda_eigenfaces_combo['values'] = ['SVD', 'PCA', 'PCA_optimizata', 'Lanczos']
+    metoda_eigenfaces_combo.set('SVD')  # Valoare default
+    metoda_eigenfaces_combo.pack(pady=5)
+    
     def on_submit():
         # Extragem valorile
         alg_str = algoritm_var.get()
@@ -64,6 +72,12 @@ def INTERFATA_SELECTARE(algoritm_dict, norma_dict):
             rezultat['k_eigenfaces'] = int(k_eig_val)
         else:
             rezultat['k_eigenfaces'] = None
+        
+        metoda_eig_val = metoda_eigenfaces_var.get()
+        if metoda_eig_val:
+            rezultat['metoda_eigenfaces'] = metoda_eig_val
+        else:
+            rezultat['metoda_eigenfaces'] = 'SVD'  # Default
         
         root.quit()
         root.destroy()

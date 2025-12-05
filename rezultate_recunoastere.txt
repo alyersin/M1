@@ -131,3 +131,21 @@ Rata de recunoastere: 90.00%
 Timp mediu interogare: 0.00024 sec / imagine
  
  
+2025-12-04 17:56:08
+Algoritm: Eigenfaces Clasic
+Norma: Euclidian
+k Eigenfaces: 60
+Timp preprocesare: 0.35653 sec
+Rata de recunoastere: 96.25%
+Timp mediu interogare: 0.00070 sec / imagine
+ 
+ 
+2025-12-04 17:58:38
+Algoritm: Eigenfaces Clasic
+Norma: Manhattan
+k Eigenfaces: 60
+Timp preprocesare: 0.33036 sec
+Rata de recunoastere: 93.75%
+Timp mediu interogare: 0.00076 sec / imagine
+ 
+ 
